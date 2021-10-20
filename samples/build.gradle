@@ -1,0 +1,32 @@
+plugins {
+    id "java"
+}
+
+group "org.objectvalidator.examples"
+version "0.1-SNAPSHOT"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Validation API
+    implementation "javax.validation:validation-api:2.0.1.Final"
+
+    // ObjectValidator
+    implementation project(":core")
+    annotationProcessor project(":processor")
+
+    // MapStruct - temp for reference implementation
+    implementation "org.mapstruct:mapstruct:1.4.2.Final"
+    annotationProcessor "org.mapstruct:mapstruct-processor:1.4.2.Final"
+
+    // Lombok - to test with
+    compileOnly "org.projectlombok:lombok:1.18.22"
+    annotationProcessor "org.projectlombok:lombok:1.18.22"
+    testAnnotationProcessor "org.projectlombok:lombok:1.18.22"
+}
+
+test {
+    useJUnitPlatform()
+}

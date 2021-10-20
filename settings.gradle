@@ -1,0 +1,5 @@
+rootProject.name = "objectvalidator"
+
+include "core"
+include "processor"
+include "samples"
