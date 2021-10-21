@@ -8,5 +8,4 @@ public class ObjectValidatorTester {
         ProductValidator validator = new ProductValidatorImpl();
         validator.validate(product);
     }
-
 }
