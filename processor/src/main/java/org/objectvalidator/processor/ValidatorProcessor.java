@@ -7,12 +7,13 @@ import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
 import javax.lang.model.type.TypeMirror;
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+
+import static java.lang.String.format;
 
 @SupportedAnnotationTypes("org.objectvalidator.Validator")
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
@@ -20,6 +21,12 @@ import java.util.Set;
 public class ValidatorProcessor extends AbstractProcessor {
 
     private static final String VALIDATOR_IMPL_SUFFIX = "Impl";
+    private static final String DEFAULT_INDENT = "    "; // 4 spaces
+
+    private final List<StatementGenerator> statementGenerators = Arrays.asList(
+            new NotNullStatementGenerator(),
+            new NotEmptyStatementGenerator()
+    );
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -47,12 +54,12 @@ public class ValidatorProcessor extends AbstractProcessor {
         String validatorClassName = element.getSimpleName() + VALIDATOR_IMPL_SUFFIX;
         TypeSpec validatorType = createValidatorImpl(validatorClassName, methods, element.asType());
         JavaFile javaFile = JavaFile.builder(packageOf.toString(), validatorType)
-                .indent("    ") // 4 spaces
+                .indent(DEFAULT_INDENT)
                 .build();
         try {
             javaFile.writeTo(processingEnv.getFiler());
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 
@@ -65,33 +72,24 @@ public class ValidatorProcessor extends AbstractProcessor {
     }
 
     private MethodSpec createMethod(ExecutableElement element) {
-        VariableElement param = element.getParameters().get(0);
+        if (element.getParameters().size() != 1) {
+            String message = format(
+                    "Method \"%s\" declared in the mapper interface should have exactly one parameter, but got %d.",
+                    element.getSimpleName(), element.getParameters().size()
+            );
+            throw new RuntimeException(message);
+        }
 
+        VariableElement param = element.getParameters().get(0);
         String paramName = param.getSimpleName().toString();
+
         List<CodeBlock> validationStatements = new ArrayList<>();
         for (Element property : processingEnv.getTypeUtils().asElement(param.asType()).getEnclosedElements()) {
             if (property.getKind() != ElementKind.FIELD) continue;
-            for (AnnotationMirror annotationMirror : processingEnv.getElementUtils().getAllAnnotationMirrors(property)) {
-                String getter = "get" + property.getSimpleName().subSequence(0, 1).toString().toUpperCase() + property.getSimpleName().subSequence(1, property.getSimpleName().length());
-                if (annotationMirror.getAnnotationType().toString().equals(NotEmpty.class.getCanonicalName())) {
-                    CodeBlock notNullValidationStatement = CodeBlock.builder()
-                            .add(
-                                    "if ($L.$L().isEmpty()) {\n    throw new $T(\"$L can not be empty.\");\n}\n",
-                                    paramName, getter, RuntimeException.class, property
-                            )
-                            .build();
-                    validationStatements.add(notNullValidationStatement);
-                }
-                if (annotationMirror.getAnnotationType().toString().equals(NotNull.class.getCanonicalName())) {
-                    CodeBlock notNullValidationStatement = CodeBlock.builder()
-                            .add(
-                                    "if ($L.$L() == null) {\n    throw new $T(\"$L can not be null.\");\n}\n",
-                                    paramName, getter, RuntimeException.class, property
-                            )
-                            .build();
-                    validationStatements.add(notNullValidationStatement);
-                }
-            }
+            statementGenerators.stream()
+                    .filter(generator -> generator.isSupported(property))
+                    .map(generator -> generator.generate(property, paramName))
+                    .forEach(validationStatements::add);
         }
 
         MethodSpec.Builder builder = MethodSpec.methodBuilder(element.getSimpleName().toString())

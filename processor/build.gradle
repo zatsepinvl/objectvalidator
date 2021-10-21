@@ -10,14 +10,20 @@ repositories {
 }
 
 dependencies {
-    compileOnly project(":core")
+    // Validation API
     implementation "javax.validation:validation-api:2.0.1.Final"
-    compileOnly "com.google.auto.service:auto-service:1.0"
 
+    // ObjectValidator Core
+    implementation project(":core")
+
+    // Javapoet - java class generation
     implementation "com.squareup:javapoet:1.13.0"
 
+    // Google Auto Service - META-INF generation
+    compileOnly "com.google.auto.service:auto-service:1.0"
     annotationProcessor "com.google.auto.service:auto-service:1.0"
 
+    // JUnit
     testImplementation "org.junit.jupiter:junit-jupiter-api:5.7.0"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:5.7.0"
 }
