@@ -17,6 +17,9 @@ dependencies {
     implementation project(":core")
     annotationProcessor project(":processor")
 
+    // Hibernate Validator - temp for reference implementation
+    implementation "org.hibernate.validator:hibernate-validator:7.0.1.Final"
+
     // MapStruct - temp for reference implementation
     implementation "org.mapstruct:mapstruct:1.4.2.Final"
     annotationProcessor "org.mapstruct:mapstruct-processor:1.4.2.Final"

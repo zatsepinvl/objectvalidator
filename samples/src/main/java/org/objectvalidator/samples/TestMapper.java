@@ -1,9 +1,10 @@
 package org.objectvalidator.samples;
 
 import org.mapstruct.Mapper;
+import org.objectvalidator.samples.simple.Car;
 
 @Mapper
 public interface TestMapper {
 
-    Product clone(Product source);
+    Car clone(Car source);
 }
