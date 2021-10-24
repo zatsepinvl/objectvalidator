@@ -7,5 +7,5 @@ import javax.lang.model.element.Element;
 public interface StatementGenerator {
     boolean isSupported(Element element);
 
-    CodeBlock generate(Element element, String objectName);
+    CodeBlock generate(Element element, String getterMethodName);
 }

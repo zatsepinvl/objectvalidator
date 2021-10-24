@@ -7,13 +7,14 @@ import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
 import javax.lang.model.type.TypeMirror;
+import javax.validation.Valid;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
 
 @SupportedAnnotationTypes("org.objectvalidator.Validator")
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
@@ -23,7 +24,7 @@ public class ValidatorProcessor extends AbstractProcessor {
     private static final String VALIDATOR_IMPL_SUFFIX = "Impl";
     private static final String DEFAULT_INDENT = "    "; // 4 spaces
 
-    private final List<StatementGenerator> statementGenerators = Arrays.asList(
+    private final List<StatementGenerator> statementGenerators = asList(
             new NotNullStatementGenerator(),
             new NotEmptyStatementGenerator()
     );
@@ -43,10 +44,11 @@ public class ValidatorProcessor extends AbstractProcessor {
 
     private void processElement(TypeElement element) {
         List<MethodSpec> methods = new ArrayList<>();
+
         for (Element enclosedElement : element.getEnclosedElements()) {
             if (enclosedElement instanceof ExecutableElement) {
-                MethodSpec method = createMethod((ExecutableElement) enclosedElement);
-                methods.add(method);
+                List<MethodSpec> method = generateValidationImplFunctions((ExecutableElement) enclosedElement);
+                methods.addAll(method);
             }
         }
 
@@ -71,7 +73,7 @@ public class ValidatorProcessor extends AbstractProcessor {
                 .build();
     }
 
-    private MethodSpec createMethod(ExecutableElement element) {
+    private List<MethodSpec> generateValidationImplFunctions(ExecutableElement element) {
         if (element.getParameters().size() != 1) {
             String message = format(
                     "Method \"%s\" declared in the mapper interface should have exactly one parameter, but got %d.",
@@ -81,26 +83,64 @@ public class ValidatorProcessor extends AbstractProcessor {
         }
 
         VariableElement param = element.getParameters().get(0);
-        String paramName = param.getSimpleName().toString();
+        Element paramType = processingEnv.getTypeUtils().asElement(param.asType());
+        String rootVariableName = param.getSimpleName().toString();
+        CodeBlock publicMethodCode = generateValidationCodeFor(
+                rootVariableName,
+                paramType
+        );
 
-        List<CodeBlock> validationStatements = new ArrayList<>();
-        for (Element property : processingEnv.getTypeUtils().asElement(param.asType()).getEnclosedElements()) {
+
+        List<MethodSpec> privateMethods = new ArrayList<>();
+
+        for (Element property : paramType.getEnclosedElements()) {
             if (property.getKind() != ElementKind.FIELD) continue;
-            statementGenerators.stream()
-                    .filter(generator -> generator.isSupported(property))
-                    .map(generator -> generator.generate(property, paramName))
-                    .forEach(validationStatements::add);
+            if (property.getAnnotation(Valid.class) != null) {
+                String propertyVariableName = property.getSimpleName().toString().toLowerCase();
+                Element propertyTypeElement = processingEnv.getTypeUtils().asElement(property.asType());
+                TypeName propertyTypeName = TypeName.get(property.asType());
+                String privateMethodName = "validate" + propertyTypeElement.getSimpleName();
+                MethodSpec spec = MethodSpec.methodBuilder(privateMethodName)
+                        .addModifiers(Modifier.PRIVATE)
+                        .addParameter(propertyTypeName, propertyVariableName)
+                        .addCode(generateValidationCodeFor(
+                                propertyVariableName,
+                                processingEnv.getTypeUtils().asElement(property.asType()))
+                        )
+                        .build();
+                privateMethods.add(spec);
+                publicMethodCode = publicMethodCode.toBuilder()
+                        .add("$L($L);\n", privateMethodName, JavaBeans.getGetterMethod(rootVariableName, property))
+                        .build();
+            }
         }
 
-        MethodSpec.Builder builder = MethodSpec.methodBuilder(element.getSimpleName().toString())
+        MethodSpec publicMethod = MethodSpec.methodBuilder(element.getSimpleName().toString())
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(
                         TypeName.get(param.asType()),
-                        param.getSimpleName().toString()
-                );
+                        rootVariableName
+                )
+                .addCode(publicMethodCode)
+                .build();
 
-        validationStatements.forEach(builder::addCode);
-        return builder.build();
+        List<MethodSpec> methods = new ArrayList<>();
+        methods.add(publicMethod);
+        methods.addAll(privateMethods);
+        return methods;
+    }
+
+    private CodeBlock generateValidationCodeFor(String variableName, Element variableType) {
+        List<CodeBlock> validationStatements = new ArrayList<>();
+        for (Element property : variableType.getEnclosedElements()) {
+            if (property.getKind() != ElementKind.FIELD) continue;
+            String getterMethod = JavaBeans.getGetterMethod(variableName, property);
+            statementGenerators.stream()
+                    .filter(generator -> generator.isSupported(property))
+                    .map(generator -> generator.generate(property, getterMethod))
+                    .forEach(validationStatements::add);
+        }
+        return CodeBlock.join(validationStatements, "\n");
     }
 }

@@ -15,17 +15,16 @@ public class NotEmptyStatementGenerator implements StatementGenerator {
     }
 
     @Override
-    public CodeBlock generate(Element element, String objectName) {
+    public CodeBlock generate(Element element, String getterMethodName) {
         NotEmpty annotation = element.getAnnotation(NotEmpty.class);
-        String getter = JavaBeans.getGetterMethodName(element);
-        String ifExpression = "$L.$L().isEmpty()";
+        String ifExpression = "isEmpty()";
         if (element.asType().getKind() == TypeKind.ARRAY) {
-            ifExpression = "$L.$L().length == 0";
+            ifExpression = "length == 0";
         }
         return CodeBlock.builder()
                 .add(
-                        "if (" + ifExpression + ") {\n    throw new $T(\"$L\", null);\n}\n",
-                        objectName, getter, ConstraintViolationException.class, annotation.message()
+                        "if ($L." + ifExpression + ") {\n    throw new $T(\"$L\", null);\n}\n",
+                        getterMethodName, ConstraintViolationException.class, annotation.message()
                 )
                 .build();
     }

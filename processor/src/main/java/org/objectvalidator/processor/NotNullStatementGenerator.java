@@ -14,13 +14,12 @@ public class NotNullStatementGenerator implements StatementGenerator {
     }
 
     @Override
-    public CodeBlock generate(Element element, String objectName) {
+    public CodeBlock generate(Element element, String getterMethodName) {
         NotNull annotation = element.getAnnotation(NotNull.class);
-        String getter = JavaBeans.getGetterMethodName(element);
         return CodeBlock.builder()
                 .add(
-                        "if ($L.$L() == null) {\n    throw new $T(\"$L\", null);\n}\n",
-                        objectName, getter, ConstraintViolationException.class, annotation.message()
+                        "if ($L == null) {\n    throw new $T(\"$L\", null);\n}\n",
+                        getterMethodName, ConstraintViolationException.class, annotation.message()
                 )
                 .build();
     }
