@@ -1,5 +1,7 @@
 # Java Object Validator
 
+[![Java CI with Gradle](https://github.com/zatsepinvl/objectvalidator/actions/workflows/gradle.yml/badge.svg?branch=main)](https://github.com/zatsepinvl/objectvalidator/actions/workflows/gradle.yml)
+
 ObjectValidator is a Java annotation processor for the generation of type-safe and performant validators for Java bean
 classes.
 
