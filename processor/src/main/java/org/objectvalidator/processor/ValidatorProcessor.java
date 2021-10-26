@@ -2,6 +2,7 @@ package org.objectvalidator.processor;
 
 import com.google.auto.service.AutoService;
 import com.squareup.javapoet.*;
+import org.objectvalidator.processor.constraints.TypeConstraintsGenerator;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
@@ -14,7 +15,6 @@ import java.util.List;
 import java.util.Set;
 
 import static java.lang.String.format;
-import static java.util.Arrays.asList;
 
 @SupportedAnnotationTypes("org.objectvalidator.Validator")
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
@@ -23,11 +23,8 @@ public class ValidatorProcessor extends AbstractProcessor {
 
     private static final String VALIDATOR_IMPL_SUFFIX = "Impl";
     private static final String DEFAULT_INDENT = "    "; // 4 spaces
-
-    private final List<StatementGenerator> statementGenerators = asList(
-            new NotNullStatementGenerator(),
-            new NotEmptyStatementGenerator()
-    );
+    private final TypeConstraintsGenerator constraintsGenerator = new TypeConstraintsGenerator();
+    private final ValidRecursiveGenerator validRecursiveGenerator = new ValidRecursiveGenerator();
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -47,14 +44,14 @@ public class ValidatorProcessor extends AbstractProcessor {
 
         for (Element enclosedElement : element.getEnclosedElements()) {
             if (enclosedElement instanceof ExecutableElement) {
-                List<MethodSpec> method = generateValidationImplFunctions((ExecutableElement) enclosedElement);
+                List<MethodSpec> method = generateValidatorImplMethods((ExecutableElement) enclosedElement);
                 methods.addAll(method);
             }
         }
 
         PackageElement packageOf = processingEnv.getElementUtils().getPackageOf(element);
         String validatorClassName = element.getSimpleName() + VALIDATOR_IMPL_SUFFIX;
-        TypeSpec validatorType = createValidatorImpl(validatorClassName, methods, element.asType());
+        TypeSpec validatorType = generateValidatorImplClass(validatorClassName, methods, element.asType());
         JavaFile javaFile = JavaFile.builder(packageOf.toString(), validatorType)
                 .indent(DEFAULT_INDENT)
                 .build();
@@ -65,7 +62,7 @@ public class ValidatorProcessor extends AbstractProcessor {
         }
     }
 
-    private TypeSpec createValidatorImpl(String className, Iterable<MethodSpec> methods, TypeMirror superinterface) {
+    private TypeSpec generateValidatorImplClass(String className, Iterable<MethodSpec> methods, TypeMirror superinterface) {
         return TypeSpec.classBuilder(className)
                 .addModifiers(Modifier.PUBLIC)
                 .addMethods(methods)
@@ -73,7 +70,7 @@ public class ValidatorProcessor extends AbstractProcessor {
                 .build();
     }
 
-    private List<MethodSpec> generateValidationImplFunctions(ExecutableElement element) {
+    private List<MethodSpec> generateValidatorImplMethods(ExecutableElement element) {
         if (element.getParameters().size() != 1) {
             String message = format(
                     "Method \"%s\" declared in the mapper interface should have exactly one parameter, but got %d.",
@@ -84,33 +81,25 @@ public class ValidatorProcessor extends AbstractProcessor {
 
         VariableElement param = element.getParameters().get(0);
         Element paramType = processingEnv.getTypeUtils().asElement(param.asType());
-        String rootVariableName = param.getSimpleName().toString();
-        CodeBlock publicMethodCode = generateValidationCodeFor(
-                rootVariableName,
+        String paramVariableName = param.getSimpleName().toString();
+        CodeBlock publicMethodCode = constraintsGenerator.generate(
+                paramVariableName,
                 paramType
         );
-
 
         List<MethodSpec> privateMethods = new ArrayList<>();
 
         for (Element property : paramType.getEnclosedElements()) {
             if (property.getKind() != ElementKind.FIELD) continue;
             if (property.getAnnotation(Valid.class) != null) {
-                String propertyVariableName = property.getSimpleName().toString().toLowerCase();
-                Element propertyTypeElement = processingEnv.getTypeUtils().asElement(property.asType());
-                TypeName propertyTypeName = TypeName.get(property.asType());
-                String privateMethodName = "validate" + propertyTypeElement.getSimpleName();
-                MethodSpec spec = MethodSpec.methodBuilder(privateMethodName)
-                        .addModifiers(Modifier.PRIVATE)
-                        .addParameter(propertyTypeName, propertyVariableName)
-                        .addCode(generateValidationCodeFor(
-                                propertyVariableName,
-                                processingEnv.getTypeUtils().asElement(property.asType()))
-                        )
-                        .build();
-                privateMethods.add(spec);
+                ValidGenerationResult generationResult = validRecursiveGenerator.generate(
+                        paramVariableName,
+                        property,
+                        processingEnv.getTypeUtils()
+                );
+                privateMethods.addAll(generationResult.getPrivateMethods());
                 publicMethodCode = publicMethodCode.toBuilder()
-                        .add("$L($L);\n", privateMethodName, JavaBeans.getGetterMethod(rootVariableName, property))
+                        .add(generationResult.getValidationInvocationCode())
                         .build();
             }
         }
@@ -120,7 +109,7 @@ public class ValidatorProcessor extends AbstractProcessor {
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(
                         TypeName.get(param.asType()),
-                        rootVariableName
+                        paramVariableName
                 )
                 .addCode(publicMethodCode)
                 .build();
@@ -131,16 +120,4 @@ public class ValidatorProcessor extends AbstractProcessor {
         return methods;
     }
 
-    private CodeBlock generateValidationCodeFor(String variableName, Element variableType) {
-        List<CodeBlock> validationStatements = new ArrayList<>();
-        for (Element property : variableType.getEnclosedElements()) {
-            if (property.getKind() != ElementKind.FIELD) continue;
-            String getterMethod = JavaBeans.getGetterMethod(variableName, property);
-            statementGenerators.stream()
-                    .filter(generator -> generator.isSupported(property))
-                    .map(generator -> generator.generate(property, getterMethod))
-                    .forEach(validationStatements::add);
-        }
-        return CodeBlock.join(validationStatements, "\n");
-    }
 }

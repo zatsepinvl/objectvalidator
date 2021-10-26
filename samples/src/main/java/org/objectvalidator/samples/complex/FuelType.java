@@ -2,16 +2,13 @@ package org.objectvalidator.samples.complex;
 
 import lombok.Data;
 
-import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
 @Data
-public class WarpEngine {
+public class FuelType {
 
     @NotNull
     private String name;
 
-    @Valid
-    @NotNull
-    private FuelType fuelType;
+    private int capacity;
 }

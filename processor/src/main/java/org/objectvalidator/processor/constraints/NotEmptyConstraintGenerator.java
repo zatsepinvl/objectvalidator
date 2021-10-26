@@ -1,4 +1,4 @@
-package org.objectvalidator.processor;
+package org.objectvalidator.processor.constraints;
 
 import com.squareup.javapoet.CodeBlock;
 
@@ -7,7 +7,7 @@ import javax.lang.model.type.TypeKind;
 import javax.validation.ConstraintViolationException;
 import javax.validation.constraints.NotEmpty;
 
-public class NotEmptyStatementGenerator implements StatementGenerator {
+public class NotEmptyConstraintGenerator implements ConstraintGenerator {
 
     @Override
     public boolean isSupported(Element element) {
