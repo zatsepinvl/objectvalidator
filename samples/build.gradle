@@ -14,7 +14,7 @@ dependencies {
     implementation "javax.validation:validation-api:2.0.1.Final"
 
     // ObjectValidator
-    implementation project(":core")
+    compileOnly project(":core")
     annotationProcessor project(":processor")
 
     // Hibernate Validator - temp for reference implementation
