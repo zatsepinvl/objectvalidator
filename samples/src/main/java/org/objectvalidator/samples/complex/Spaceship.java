@@ -19,4 +19,12 @@ public class Spaceship {
     @Valid
     @NotNull
     private WarpEngine engine;
+
+    @Valid
+    @NotNull
+    private WarpEngine backupEngine;
+
+    @Valid
+    @NotNull
+    private Element element;
 }

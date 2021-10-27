@@ -1,7 +1,7 @@
 package org.objectvalidator.processor.constraints;
 
 import com.squareup.javapoet.CodeBlock;
-import org.objectvalidator.processor.JavaBeans;
+import org.objectvalidator.processor.NameUtils;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -21,7 +21,7 @@ public class TypeConstraintsGenerator {
         List<CodeBlock> validationStatements = new ArrayList<>();
         for (Element property : variableType.getEnclosedElements()) {
             if (property.getKind() != ElementKind.FIELD) continue;
-            String getterMethod = JavaBeans.getGetterMethod(variableName, property);
+            String getterMethod = NameUtils.getGetterMethod(variableName, property);
             statementGenerators.stream()
                     .filter(generator -> generator.isSupported(property))
                     .map(generator -> generator.generate(property, getterMethod))

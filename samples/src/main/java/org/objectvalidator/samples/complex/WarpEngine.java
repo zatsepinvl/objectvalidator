@@ -14,4 +14,8 @@ public class WarpEngine {
     @Valid
     @NotNull
     private FuelType fuelType;
+
+    @Valid
+    @NotNull
+    private Element element;
 }

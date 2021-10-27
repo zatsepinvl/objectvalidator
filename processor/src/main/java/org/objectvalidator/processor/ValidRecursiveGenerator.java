@@ -11,7 +11,11 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.util.Types;
 import javax.validation.Valid;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
+import static java.util.Arrays.asList;
 
 public class ValidRecursiveGenerator {
 
@@ -19,38 +23,54 @@ public class ValidRecursiveGenerator {
     private final TypeConstraintsGenerator constraintsGenerator = new TypeConstraintsGenerator();
 
 
-    public ValidGenerationResult generate(String parentVariableName, Element property, Types types) {
+    // ToDo: This is quite creepy algorithm - should be refactored
+    public ValidGenerationResult generate(String parentVariableName, Element parent, Types types) {
+        List<MethodSpec> privateMethods = new ArrayList<>();
+        List<CodeBlock> invocationCodes = new ArrayList<>();
+        Set<String> methodNames = new HashSet<>();
 
-        String propertyVariableName = property.getSimpleName().toString().toLowerCase();
+        for (Element property : parent.getEnclosedElements()) {
+            if (property.getKind() != ElementKind.FIELD) continue;
+            if (property.getAnnotation(Valid.class) != null) {
+                ValidGenerationResult generationResult = generateForProperty(parentVariableName, property, types);
+                generationResult.getPrivateMethods().stream()
+                        .filter(method -> !methodNames.contains(method.name))
+                        .forEach(method -> {
+                            privateMethods.add(method);
+                            methodNames.add(method.name);
+                        });
+                invocationCodes.add(generationResult.getValidationInvocationCode());
+            }
+        }
+
+        CodeBlock validationInvocationCode = CodeBlock.join(invocationCodes, "\n");
+        return new ValidGenerationResult(validationInvocationCode, privateMethods);
+    }
+
+    private ValidGenerationResult generateForProperty(String parentVariableName, Element property, Types types) {
         Element propertyTypeElement = types.asElement(property.asType());
         TypeName propertyTypeName = TypeName.get(property.asType());
         String privateMethodName = VALIDATE_METHOD_PREFIX + propertyTypeElement.getSimpleName();
+        String propertyVariableName = NameUtils.getParameterNameFromType(propertyTypeElement);
 
         CodeBlock validationCode = constraintsGenerator.generate(propertyVariableName, propertyTypeElement);
+        CodeBlock validationInvocationCode = CodeBlock.builder()
+                .add(
+                        "$L($L);",
+                        privateMethodName, NameUtils.getGetterMethod(parentVariableName, property)
+                )
+                .build();
+
+
+        ValidGenerationResult result = generate(propertyVariableName, propertyTypeElement, types);
+        List<MethodSpec> privateMethods = new ArrayList<>(result.getPrivateMethods());
+        validationCode = CodeBlock.join(asList(validationCode, result.getValidationInvocationCode()), "\n");
+
         MethodSpec validationMethod = MethodSpec.methodBuilder(privateMethodName)
                 .addModifiers(Modifier.PRIVATE)
                 .addParameter(propertyTypeName, propertyVariableName)
                 .addCode(validationCode)
                 .build();
-        CodeBlock validationInvocationCode = CodeBlock.builder()
-                .add(
-                        "\n$L($L);\n",
-                        privateMethodName, JavaBeans.getGetterMethod(parentVariableName, property)
-                )
-                .build();
-
-        List<MethodSpec> privateMethods = new ArrayList<>();
-        for (Element element : propertyTypeElement.getEnclosedElements()) {
-            if (element.getKind() != ElementKind.FIELD) continue;
-            if (element.getAnnotation(Valid.class) != null) {
-                ValidGenerationResult result = generate(propertyVariableName, element, types);
-                privateMethods.addAll(result.getPrivateMethods());
-                validationMethod = validationMethod.toBuilder()
-                        .addCode(result.getValidationInvocationCode())
-                        .build();
-            }
-        }
-
         privateMethods.add(0, validationMethod);
 
         return new ValidGenerationResult(validationInvocationCode, privateMethods);

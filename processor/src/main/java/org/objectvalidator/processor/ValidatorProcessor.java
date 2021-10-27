@@ -8,13 +8,13 @@ import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
 import javax.lang.model.type.TypeMirror;
-import javax.validation.Valid;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
 
 @SupportedAnnotationTypes("org.objectvalidator.Validator")
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
@@ -87,22 +87,13 @@ public class ValidatorProcessor extends AbstractProcessor {
                 paramType
         );
 
-        List<MethodSpec> privateMethods = new ArrayList<>();
-
-        for (Element property : paramType.getEnclosedElements()) {
-            if (property.getKind() != ElementKind.FIELD) continue;
-            if (property.getAnnotation(Valid.class) != null) {
-                ValidGenerationResult generationResult = validRecursiveGenerator.generate(
-                        paramVariableName,
-                        property,
-                        processingEnv.getTypeUtils()
-                );
-                privateMethods.addAll(generationResult.getPrivateMethods());
-                publicMethodCode = publicMethodCode.toBuilder()
-                        .add(generationResult.getValidationInvocationCode())
-                        .build();
-            }
-        }
+        ValidGenerationResult generationResult = validRecursiveGenerator.generate(
+                paramVariableName,
+                paramType,
+                processingEnv.getTypeUtils()
+        );
+        List<MethodSpec> privateMethods = new ArrayList<>(generationResult.getPrivateMethods());
+        publicMethodCode = CodeBlock.join(asList(publicMethodCode, generationResult.getValidationInvocationCode()), "\n");
 
         MethodSpec publicMethod = MethodSpec.methodBuilder(element.getSimpleName().toString())
                 .addAnnotation(Override.class)
