@@ -43,7 +43,7 @@ public class ValidRecursiveGenerator {
             }
         }
 
-        CodeBlock validationInvocationCode = CodeBlock.join(invocationCodes, "\n");
+        CodeBlock validationInvocationCode = CodeBlock.join(invocationCodes, "");
         return new ValidGenerationResult(validationInvocationCode, privateMethods);
     }
 
@@ -54,13 +54,10 @@ public class ValidRecursiveGenerator {
         String propertyVariableName = NameUtils.getParameterNameFromType(propertyTypeElement);
 
         CodeBlock validationCode = constraintsGenerator.generate(propertyVariableName, propertyTypeElement);
+        String propertyGetter = NameUtils.getGetterMethod(parentVariableName, property);
         CodeBlock validationInvocationCode = CodeBlock.builder()
-                .add(
-                        "$L($L);",
-                        privateMethodName, NameUtils.getGetterMethod(parentVariableName, property)
-                )
+                .addStatement("$L($L)", privateMethodName, propertyGetter)
                 .build();
-
 
         ValidGenerationResult result = generate(propertyVariableName, propertyTypeElement, types);
         List<MethodSpec> privateMethods = new ArrayList<>(result.getPrivateMethods());

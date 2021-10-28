@@ -16,11 +16,11 @@ public class NotNullConstraintGenerator implements ConstraintGenerator {
     @Override
     public CodeBlock generate(Element element, String getterMethodName) {
         NotNull annotation = element.getAnnotation(NotNull.class);
+        String exceptionMessage = annotation.message();
         return CodeBlock.builder()
-                .add(
-                        "if ($L == null) {\n    throw new $T(\"$L\", null);\n}\n",
-                        getterMethodName, ConstraintViolationException.class, annotation.message()
-                )
+                .beginControlFlow("if ($L == null)", getterMethodName)
+                .addStatement("throw new $T(\"$L\", null)", ConstraintViolationException.class, exceptionMessage)
+                .endControlFlow()
                 .build();
     }
 }

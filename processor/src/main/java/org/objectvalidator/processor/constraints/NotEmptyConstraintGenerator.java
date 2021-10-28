@@ -21,11 +21,11 @@ public class NotEmptyConstraintGenerator implements ConstraintGenerator {
         if (element.asType().getKind() == TypeKind.ARRAY) {
             ifExpression = "length == 0";
         }
+        String exceptionMessage = annotation.message();
         return CodeBlock.builder()
-                .add(
-                        "if ($L." + ifExpression + ") {\n    throw new $T(\"$L\", null);\n}\n",
-                        getterMethodName, ConstraintViolationException.class, annotation.message()
-                )
+                .beginControlFlow("if ($L.$L)", getterMethodName, ifExpression)
+                .addStatement("throw new $T(\"$L\", null)", ConstraintViolationException.class, exceptionMessage)
+                .endControlFlow()
                 .build();
     }
 }
