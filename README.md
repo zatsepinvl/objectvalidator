@@ -63,9 +63,19 @@ public class ObjectValidatorTester {
 }
 ```
 
-## Supported Constraint Annotations
+## Java Validation API Support Status
 
-|    Annotation    |    Support status    |
-|------------------|--------------|
-|@NotEmpty        | partially|
-|@NotNull        | partially|
+### Constraints
+
+|    Constraint     |     Status     |
+|-------------------|-----------------------|
+|@NotEmpty          | :beer: Supported             |
+|@NotNull           | :beer: Supported             |
+|@NotBlank          | :beer: Supported             |
+
+### Features
+
+|    Feature     |    Status     |
+|----------------|-----------------------|
+|Nested validations with @Valid          | :beer: Supported             |
+|Constraint violation message | :runner: Coming soon...|
