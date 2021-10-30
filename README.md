@@ -9,7 +9,7 @@ classes.
 
 ## Installation
 
-:runner: coming soon...
+:runner: Coming soon...
 
 ## Getting Started
 
