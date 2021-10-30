@@ -15,7 +15,8 @@ public class TypeConstraintsGeneratorImpl implements TypeConstraintsGenerator {
 
     private final List<ConstraintGenerator> statementGenerators = asList(
             new NotNullConstraintGenerator(),
-            new NotEmptyConstraintGenerator()
+            new NotEmptyConstraintGenerator(),
+            new NotBlankConstraintGenerator()
     );
 
     @Override
