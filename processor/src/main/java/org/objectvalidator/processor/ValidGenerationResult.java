@@ -6,12 +6,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
+import java.util.Collection;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class ValidGenerationResult {
-    private CodeBlock validationInvocationCode;
-    private List<MethodSpec> privateMethods;
+    private CodeBlock validationCode;
+    private Collection<MethodSpec> privateMethods;
 }

@@ -1,8 +1,11 @@
 package org.objectvalidator.processor;
 
 import com.google.auto.service.AutoService;
-import com.squareup.javapoet.*;
-import org.objectvalidator.processor.constraints.TypeConstraintsGenerator;
+import com.squareup.javapoet.JavaFile;
+import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.TypeSpec;
+import org.objectvalidator.processor.constraints.TypeConstraintsGeneratorImpl;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
@@ -14,7 +17,6 @@ import java.util.List;
 import java.util.Set;
 
 import static java.lang.String.format;
-import static java.util.Arrays.asList;
 
 @SupportedAnnotationTypes("org.objectvalidator.Validator")
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
@@ -22,12 +24,15 @@ import static java.util.Arrays.asList;
 public class ValidatorProcessor extends AbstractProcessor {
 
     private static final String VALIDATOR_IMPL_SUFFIX = "Impl";
-    private static final String DEFAULT_INDENT = "    "; // 4 spaces
-    private final TypeConstraintsGenerator constraintsGenerator = new TypeConstraintsGenerator();
-    private final ValidRecursiveGenerator validRecursiveGenerator = new ValidRecursiveGenerator();
+
+    private ValidationCodeGeneratorImpl validationCodeGenerator;
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+        validationCodeGenerator = new ValidationCodeGeneratorImpl(
+                processingEnv.getTypeUtils(),
+                new TypeConstraintsGeneratorImpl()
+        );
         for (TypeElement annotation : annotations) {
             Set<? extends Element> annotatedElements = roundEnv.getElementsAnnotatedWith(annotation);
             for (Element element : annotatedElements) {
@@ -53,7 +58,7 @@ public class ValidatorProcessor extends AbstractProcessor {
         String validatorClassName = element.getSimpleName() + VALIDATOR_IMPL_SUFFIX;
         TypeSpec validatorType = generateValidatorImplClass(validatorClassName, methods, element.asType());
         JavaFile javaFile = JavaFile.builder(packageOf.toString(), validatorType)
-                .indent(DEFAULT_INDENT)
+                .indent(Formatting.INDENT)
                 .build();
         try {
             javaFile.writeTo(processingEnv.getFiler());
@@ -81,34 +86,23 @@ public class ValidatorProcessor extends AbstractProcessor {
 
         VariableElement param = element.getParameters().get(0);
         Element paramType = processingEnv.getTypeUtils().asElement(param.asType());
-        String paramVariableName = param.getSimpleName().toString();
-        CodeBlock publicMethodCode = constraintsGenerator.generate(
-                paramVariableName,
-                paramType
-        );
+        String paramName = param.getSimpleName().toString();
 
-        ValidGenerationResult generationResult = validRecursiveGenerator.generate(
-                paramVariableName,
-                paramType,
-                processingEnv.getTypeUtils()
-        );
-        List<MethodSpec> privateMethods = new ArrayList<>(generationResult.getPrivateMethods());
-        publicMethodCode = CodeBlock.join(asList(publicMethodCode, generationResult.getValidationInvocationCode()), "\n");
+        ValidGenerationResult generationResult = validationCodeGenerator.generate(paramName, paramType);
 
         MethodSpec publicMethod = MethodSpec.methodBuilder(element.getSimpleName().toString())
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(
                         TypeName.get(param.asType()),
-                        paramVariableName
+                        paramName
                 )
-                .addCode(publicMethodCode)
+                .addCode(generationResult.getValidationCode())
                 .build();
 
         List<MethodSpec> methods = new ArrayList<>();
         methods.add(publicMethod);
-        methods.addAll(privateMethods);
+        methods.addAll(generationResult.getPrivateMethods());
         return methods;
     }
-
 }
