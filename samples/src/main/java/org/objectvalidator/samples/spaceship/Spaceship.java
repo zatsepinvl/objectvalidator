@@ -1,4 +1,4 @@
-package org.objectvalidator.samples.complex;
+package org.objectvalidator.samples.spaceship;
 
 import lombok.Data;
 
@@ -6,6 +6,7 @@ import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
+import java.util.List;
 
 @Data
 public class Spaceship {
@@ -28,5 +29,5 @@ public class Spaceship {
 
     @Valid
     @NotNull
-    private Element element;
+    private List<Element> element;
 }

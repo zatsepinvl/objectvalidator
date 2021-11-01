@@ -1,4 +1,4 @@
-package org.objectvalidator.samples.complex;
+package org.objectvalidator.samples.spaceship;
 
 import org.objectvalidator.Validator;
 

@@ -1,4 +1,4 @@
-package org.objectvalidator.samples.simple;
+package org.objectvalidator.samples.car;
 
 import lombok.Data;
 

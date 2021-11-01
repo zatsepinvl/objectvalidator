@@ -11,7 +11,7 @@ import java.util.Collection;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ValidGenerationResult {
+public class ValidationGenerationResult {
     private CodeBlock validationCode;
     private Collection<MethodSpec> privateMethods;
 }

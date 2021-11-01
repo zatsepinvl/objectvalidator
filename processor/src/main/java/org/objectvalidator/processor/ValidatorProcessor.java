@@ -88,7 +88,7 @@ public class ValidatorProcessor extends AbstractProcessor {
         Element paramType = processingEnv.getTypeUtils().asElement(param.asType());
         String paramName = param.getSimpleName().toString();
 
-        ValidGenerationResult generationResult = validationCodeGenerator.generate(paramName, paramType);
+        ValidationGenerationResult generationResult = validationCodeGenerator.generate(paramName, paramType);
 
         MethodSpec publicMethod = MethodSpec.methodBuilder(element.getSimpleName().toString())
                 .addAnnotation(Override.class)

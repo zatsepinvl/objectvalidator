@@ -1,7 +1,7 @@
-package org.objectvalidator.samples;
+package org.objectvalidator.samples.spaceship;
 
 import org.mapstruct.Mapper;
-import org.objectvalidator.samples.simple.Car;
+import org.objectvalidator.samples.car.Car;
 
 @Mapper
 public interface TestMapper {
