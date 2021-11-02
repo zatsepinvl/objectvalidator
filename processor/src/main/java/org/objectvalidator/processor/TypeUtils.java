@@ -4,8 +4,14 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.Types;
 
 public final class TypeUtils {
+
+    public static boolean isCollectionTypeFromField(Element field, Types types) {
+        return isCollectionType((TypeElement) types.asElement(field.asType()));
+    }
+
     public static boolean isCollectionType(TypeElement typeElement) {
         if (isIterable(typeElement)) {
             return true;

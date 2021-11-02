@@ -24,7 +24,7 @@ public class TypeConstraintsGeneratorImpl implements TypeConstraintsGenerator {
         List<CodeBlock> validationStatements = new ArrayList<>();
         for (Element property : variableType.getEnclosedElements()) {
             if (property.getKind() != ElementKind.FIELD) continue;
-            String getterMethod = NameUtils.getGetterMethod(variableName, property);
+            String getterMethod = NameUtils.getFieldGetterExpression(variableName, property);
             statementGenerators.stream()
                     .filter(generator -> generator.isSupported(property))
                     .map(generator -> generator.generate(property, getterMethod))

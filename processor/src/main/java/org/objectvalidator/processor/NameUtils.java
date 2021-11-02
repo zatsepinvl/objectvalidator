@@ -12,11 +12,11 @@ public final class NameUtils {
                 + element.getSimpleName().subSequence(1, element.getSimpleName().length());
     }
 
-    public static String getGetterMethod(String variableName, Element variableClass) {
-        return variableName + "." + getGetterMethodName(variableClass) + "()";
+    public static String getFieldGetterExpression(String variableName, Element fieldClass) {
+        return variableName + "." + getGetterMethodName(fieldClass) + "()";
     }
 
-    public static String getParameterNameFromElement(Element element) {
+    public static String getVariableNameForClass(Element element) {
         return element.getSimpleName().subSequence(0, 1).toString().toLowerCase()
                 + element.getSimpleName().subSequence(1, element.getSimpleName().length());
     }
