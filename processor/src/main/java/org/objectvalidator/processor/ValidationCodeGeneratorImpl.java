@@ -36,10 +36,12 @@ public class ValidationCodeGeneratorImpl implements ValidationCodeGenerator {
         Map<String, MethodSpec> methods = new HashMap<>();
 
         visitValidFields(propertyClass, field -> {
-            boolean isCollectionType = TypeUtils.isCollectionTypeFromField(field, types);
             Element nestedFieldClass;
-            if (isCollectionType) {
+            if (TypeUtils.isCollectionType(field, types)) {
                 TypeMirror itemClassType = TypeUtils.getCollectionItemType(field);
+                nestedFieldClass = types.asElement(itemClassType);
+            } else if (TypeUtils.isArrayType(field)) {
+                TypeMirror itemClassType = TypeUtils.getArrayItemType(field);
                 nestedFieldClass = types.asElement(itemClassType);
             } else {
                 nestedFieldClass = types.asElement(field.asType());
@@ -74,9 +76,12 @@ public class ValidationCodeGeneratorImpl implements ValidationCodeGenerator {
         visitValidFields(propertyClass, field -> {
             CodeBlock nestedValidationInvocation;
             String fieldGetterExpression = NameUtils.getFieldGetterExpression(variableName, field);
-            boolean isCollectionType = TypeUtils.isCollectionTypeFromField(field, types);
-            if (isCollectionType) {
-                nestedValidationInvocation = generateValidationInvocationCodeForIterableField(field, fieldGetterExpression);
+            if (TypeUtils.isCollectionType(field, types)) {
+                TypeMirror itemType = TypeUtils.getCollectionItemType(field);
+                nestedValidationInvocation = generateValidationInvocationCodeForIterableField(itemType, fieldGetterExpression);
+            } else if (TypeUtils.isArrayType(field)) {
+                TypeMirror itemType = TypeUtils.getArrayItemType(field);
+                nestedValidationInvocation = generateValidationInvocationCodeForIterableField(itemType, fieldGetterExpression);
             } else {
                 nestedValidationInvocation = generateValidationInvocationCodeForField(field, fieldGetterExpression);
             }
@@ -94,8 +99,7 @@ public class ValidationCodeGeneratorImpl implements ValidationCodeGenerator {
         }
     }
 
-    private CodeBlock generateValidationInvocationCodeForIterableField(Element field, String fieldGetterExpression) {
-        TypeMirror itemType = TypeUtils.getCollectionItemType(field);
+    private CodeBlock generateValidationInvocationCodeForIterableField(TypeMirror itemType, String fieldGetterExpression) {
         Element itemClassElement = types.asElement(itemType);
         Name itemClassName = itemClassElement.getSimpleName();
         String privateMethodName = getValidationMethodName(itemClassElement);

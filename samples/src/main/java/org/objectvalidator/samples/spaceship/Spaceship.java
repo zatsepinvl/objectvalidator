@@ -29,5 +29,8 @@ public class Spaceship {
 
     @Valid
     @NotNull
-    private List<Element> element;
+    private List<Element> elementsList;
+
+    @Valid
+    private Element[] elementsArray;
 }
