@@ -21,7 +21,9 @@ public class NotEmptyConstraintGenerator implements ConstraintGenerator {
         if (element.asType().getKind() == TypeKind.ARRAY) {
             ifExpression = "length == 0";
         }
-        String exceptionMessage = annotation.message();
+        String exceptionMessage = ConstraintAnnotationUtils.getViolationMessageOrDefault(
+                annotation, element.getSimpleName().toString() + " must not be empty"
+        );
         return CodeBlock.builder()
                 .beginControlFlow("if ($L.$L)", getterMethodName, ifExpression)
                 .addStatement("throw new $T(\"$L\", null)", ConstraintViolationException.class, exceptionMessage)
