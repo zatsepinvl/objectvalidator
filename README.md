@@ -63,6 +63,8 @@ public class ObjectValidatorTester {
 }
 ```
 
+See [samples](./samples) for more examples.
+
 ## Java Validation API Support Status
 
 ### Constraints
@@ -77,5 +79,5 @@ public class ObjectValidatorTester {
 
 |    Feature     |    Status     |
 |----------------|-----------------------|
-|Nested validations with @Valid          | :beer: Supported             |
+|Nested validations with @Valid          | :beer: Supported for iterables and arrays           |
 |Constraint violation message | :runner: Coming soon...|

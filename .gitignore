@@ -5,3 +5,7 @@
 # Gradle
 .gradle
 build
+
+# Generation examples
+samples/build/generated/sources/annotationProcessor/java/main/org/objectvalidator/samples/car/CarValidatorImpl.java
+samples/build/generated/sources/annotationProcessor/java/main/org/objectvalidator/samples/spaceship/SpaceshipValidatorImpl.java
