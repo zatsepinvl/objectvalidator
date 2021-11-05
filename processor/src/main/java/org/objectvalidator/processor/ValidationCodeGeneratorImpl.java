@@ -3,6 +3,8 @@ package org.objectvalidator.processor;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
+import org.objectvalidator.processor.code.ForCode;
+import org.objectvalidator.processor.code.InvocationCode;
 import org.objectvalidator.processor.constraints.TypeConstraintsGenerator;
 
 import javax.lang.model.element.Element;
@@ -103,19 +105,23 @@ public class ValidationCodeGeneratorImpl implements ValidationCodeGenerator {
         Element itemClassElement = types.asElement(itemType);
         Name itemClassName = itemClassElement.getSimpleName();
         String privateMethodName = getValidationMethodName(itemClassElement);
-        return CodeBlock.builder()
-                .beginControlFlow("for ($L item : $L)", itemClassName, fieldGetterExpression)
-                .addStatement("$L(item)", privateMethodName)
-                .endControlFlow()
-                .build();
+
+        CodeBlock privateMethodInvocation = InvocationCode.generator()
+                .method(privateMethodName).variable("item")
+                .prepare().generate();
+
+        return ForCode.generator()
+                .collectionClass(itemClassName).variableName("item").in(fieldGetterExpression)
+                .body(privateMethodInvocation)
+                .prepare().generate();
     }
 
     private CodeBlock generateValidationInvocationCodeForField(Element field, String fieldGetterExpression) {
         Element fieldClass = types.asElement(field.asType());
         String privateMethodName = getValidationMethodName(fieldClass);
-        return CodeBlock.builder()
-                .addStatement("$L($L)", privateMethodName, fieldGetterExpression)
-                .build();
+        return InvocationCode.generator()
+                .method(privateMethodName).variable(fieldGetterExpression)
+                .prepare().generate();
     }
 
     private String getValidationMethodName(Element classElement) {
