@@ -2,4 +2,4 @@ rootProject.name = "objectvalidator"
 
 include "core"
 include "processor"
-include "samples"
+include "samples:java8"
