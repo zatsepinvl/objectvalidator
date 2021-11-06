@@ -8,4 +8,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.CLASS)
 @Target(ElementType.TYPE)
 public @interface Validator {
+    ComponentModel componentModel() default ComponentModel.NONE;
 }

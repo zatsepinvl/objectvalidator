@@ -1,0 +1,35 @@
+plugins {
+    id "org.springframework.boot" version "2.5.6"
+    id "io.spring.dependency-management" version "1.0.11.RELEASE"
+    id "java"
+}
+
+group "org.objectvalidator.samples"
+version "0.1-SNAPSHOT"
+sourceCompatibility = "1.8"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Spring
+    implementation "org.springframework.boot:spring-boot-starter"
+    testImplementation "org.springframework.boot:spring-boot-starter-test"
+
+    // Validation API
+    implementation "javax.validation:validation-api:2.0.1.Final"
+
+    // ObjectValidator
+    compileOnly project(":core")
+    annotationProcessor project(":processor")
+
+    // Lombok
+    compileOnly "org.projectlombok:lombok:1.18.22"
+    annotationProcessor "org.projectlombok:lombok:1.18.22"
+    testAnnotationProcessor "org.projectlombok:lombok:1.18.22"
+}
+
+test {
+    useJUnitPlatform()
+}

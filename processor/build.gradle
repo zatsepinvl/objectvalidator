@@ -19,6 +19,9 @@ dependencies {
     // Javapoet - java class generation
     implementation "com.squareup:javapoet:1.13.0"
 
+    // Spring Context
+    implementation group: 'org.springframework', name: 'spring-context', version: '5.3.12'
+
     // Google Auto Service - META-INF generation
     compileOnly "com.google.auto.service:auto-service:1.0"
     annotationProcessor "com.google.auto.service:auto-service:1.0"

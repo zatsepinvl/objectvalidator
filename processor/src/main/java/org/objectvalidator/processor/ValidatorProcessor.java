@@ -5,12 +5,14 @@ import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import org.objectvalidator.ComponentModel;
+import org.objectvalidator.Validator;
 import org.objectvalidator.processor.constraints.TypeConstraintsGeneratorImpl;
+import org.springframework.stereotype.Service;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
-import javax.lang.model.type.TypeMirror;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,14 +39,14 @@ public class ValidatorProcessor extends AbstractProcessor {
             Set<? extends Element> annotatedElements = roundEnv.getElementsAnnotatedWith(annotation);
             for (Element element : annotatedElements) {
                 if (element instanceof TypeElement) {
-                    processElement((TypeElement) element);
+                    generateValidatorImpl((TypeElement) element);
                 }
             }
         }
         return true;
     }
 
-    private void processElement(TypeElement element) {
+    private void generateValidatorImpl(TypeElement element) {
         List<MethodSpec> methods = new ArrayList<>();
 
         for (Element enclosedElement : element.getEnclosedElements()) {
@@ -54,25 +56,8 @@ public class ValidatorProcessor extends AbstractProcessor {
             }
         }
 
-        PackageElement packageOf = processingEnv.getElementUtils().getPackageOf(element);
-        String validatorClassName = element.getSimpleName() + VALIDATOR_IMPL_SUFFIX;
-        TypeSpec validatorType = generateValidatorImplClass(validatorClassName, methods, element.asType());
-        JavaFile javaFile = JavaFile.builder(packageOf.toString(), validatorType)
-                .indent(Formatting.INDENT)
-                .build();
-        try {
-            javaFile.writeTo(processingEnv.getFiler());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private TypeSpec generateValidatorImplClass(String className, Iterable<MethodSpec> methods, TypeMirror superinterface) {
-        return TypeSpec.classBuilder(className)
-                .addModifiers(Modifier.PUBLIC)
-                .addMethods(methods)
-                .addSuperinterface(superinterface)
-                .build();
+        TypeSpec validatorTypeSpec = generateValidatorImplClassType(element, methods);
+        writeValidatorImplJavaFile(element, validatorTypeSpec);
     }
 
     private List<MethodSpec> generateValidatorImplMethods(ExecutableElement element) {
@@ -104,5 +89,29 @@ public class ValidatorProcessor extends AbstractProcessor {
         methods.add(publicMethod);
         methods.addAll(generationResult.getPrivateMethods());
         return methods;
+    }
+
+    private TypeSpec generateValidatorImplClassType(Element interfaceElement, Iterable<MethodSpec> methods) {
+        String validatorClassName = interfaceElement.getSimpleName() + VALIDATOR_IMPL_SUFFIX;
+        TypeSpec.Builder builder = TypeSpec.classBuilder(validatorClassName)
+                .addModifiers(Modifier.PUBLIC)
+                .addMethods(methods)
+                .addSuperinterface(interfaceElement.asType());
+        if (interfaceElement.getAnnotation(Validator.class).componentModel() == ComponentModel.SPRING) {
+            builder = builder.addAnnotation(Service.class);
+        }
+        return builder.build();
+    }
+
+    private void writeValidatorImplJavaFile(TypeElement interfaceClass, TypeSpec validatorTypeSpec) {
+        PackageElement packageOf = processingEnv.getElementUtils().getPackageOf(interfaceClass);
+        JavaFile javaFile = JavaFile.builder(packageOf.toString(), validatorTypeSpec)
+                .indent(Formatting.INDENT)
+                .build();
+        try {
+            javaFile.writeTo(processingEnv.getFiler());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
